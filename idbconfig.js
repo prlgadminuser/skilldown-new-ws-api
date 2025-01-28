@@ -4,14 +4,13 @@ const encodedPassword = encodeURIComponent(password);
 const { MongoClient, ServerApiVersion } = require("mongodb");
 
 const tokenkey = "d8ce40604d359eeb9f2bff31beca4b4b"
+const lgconnecturi = `mongodb+srv://Liquem:${encodedPassword}@cluster0.ed4zami.mongodb.net/?retryWrites=true&w=majority`;
 
 
 const nicknameRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\| {2,}|:))(?!^\s)(?!.*\s$)(?!.*\s{2,}).{4,16}$/u;
 const usernameRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s|:)).{4,16}$/u;
 const passwordRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s)).{4,20}$/u;
 const badWords = ["undefined", "null", "liquem", "nigga", "nigger", "niga", "fuck", "ass", "bitch", "hure", "schlampe", "hitler", "whore"]; 
-
-const lgconnecturi = `mongodb+srv://Liquem:${encodedPassword}@cluster0.ed4zami.mongodb.net/?retryWrites=true&w=majority`;
 
 const uri = lgconnecturi
 
@@ -20,7 +19,6 @@ const client = new MongoClient(uri, {
       version: ServerApiVersion.v1,
       strict: true,
       deprecationErrors: true,
-      socketTimeoutMS: 30000,
    //   maxConnecting: 2,
      // maxIdleTimeMS: 300000,
      // maxPoolSize: 100,

@@ -5,10 +5,10 @@ async function equipItem(username, type, itemid) {
 
 
     const itemTypeMap = {
-        a: "equipped_item",
-        b: "equipped_item2",
-        i: "equipped_banner",
-        p: "equipped_pose",
+        a: "hat",
+        b: "top",
+        i: "banner",
+        p: "pose",
     };
 
     const itemType = itemTypeMap[type.toLowerCase()];

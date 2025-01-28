@@ -1,6 +1,8 @@
 
 const { userCollection } = require('./..//idbconfig');
 
+const send_joined_date = false
+
 async function getUserProfile(usernamed) {
   try {
     // Fetch user data from the database
@@ -10,15 +12,14 @@ async function getUserProfile(usernamed) {
         projection: {
           username: 1,
           nickname: 1,
-          equipped_item: 1,
-          equipped_item2: 1,
-          equipped_banner: 1,
-          equipped_pose: 1,
-          equipped_color: 1,
-          all_coins_earned: 1,
-          equipped_hat_color: 1,
-          equipped_body_color: 1,
-          equipped_banner_color: 1,
+          hat: 1,
+          top: 1,
+          banner: 1,
+          pose: 1,
+          color: 1,
+          hat_color: 1,
+          top_color: 1,
+          banner_color: 1,
           created_at: 1,
           kills: 1,
           damage: 1,
@@ -34,46 +35,71 @@ async function getUserProfile(usernamed) {
       throw new Error("User not found");
     }
 
-    // Calculate time since user joined
-    const joinedTimestamp = userRow.created_at.getTime();
-    const currentTime = new Date().getTime();
-    const timeSinceJoined = currentTime - joinedTimestamp;
+    if (send_joined_date) {
 
-    const daysSinceJoined = Math.floor(timeSinceJoined / (1000 * 60 * 60 * 24));
-    const monthsSinceJoined = Math.floor(daysSinceJoined / 30);
-    const yearsSinceJoined = Math.floor(monthsSinceJoined / 12);
-
-    let displayString;
-
-    if (yearsSinceJoined > 0) {
-      displayString = `${yearsSinceJoined} year${yearsSinceJoined > 1 ? "s" : ""}`;
-    } else if (monthsSinceJoined > 0) {
-      displayString = `${monthsSinceJoined} month${monthsSinceJoined > 1 ? "s" : ""}`;
-    } else {
-      displayString = `${daysSinceJoined} day${daysSinceJoined > 1 ? "s" : ""}`;
+      const joinedTimestamp = userRow.created_at.getTime();
+      const currentTime = new Date().getTime();
+      const timeSinceJoined = currentTime - joinedTimestamp;
+  
+      const daysSinceJoined = Math.floor(timeSinceJoined / (1000 * 60 * 60 * 24));
+      const monthsSinceJoined = Math.floor(daysSinceJoined / 30);
+      const yearsSinceJoined = Math.floor(monthsSinceJoined / 12);
+  
+      let displayString;
+  
+      if (yearsSinceJoined > 0) {
+        displayString = `${yearsSinceJoined} year${yearsSinceJoined > 1 ? "s" : ""}`;
+      } else if (monthsSinceJoined > 0) {
+        displayString = `${monthsSinceJoined} month${monthsSinceJoined > 1 ? "s" : ""}`;
+      } else {
+        displayString = `${daysSinceJoined} day${daysSinceJoined > 1 ? "s" : ""}`;
+      }
     }
 
+
     // Return the user profile data
-    return {
+  /*return {
       username: userRow.username || "User",
       nickname: userRow.nickname || "User",
-      equipped_item: userRow.equipped_item || 0,
-      equipped_item2: userRow.equipped_item2 || 0,
-      equipped_banner: userRow.equipped_banner || 0,
-      equipped_pose: userRow.equipped_pose || 0,
-      equipped_color: userRow.equipped_color || 0,
-      all_coins_earned: userRow.all_coins_earned || 0,
-      equipped_hat_color: userRow.equipped_hat_color || 0,
-      equipped_body_color: userRow.equipped_body_color || 0,
-      equipped_banner_color: userRow.equipped_banner_color || 0,
-      days_since_joined: displayString,
+      hat: userRow.hat || 0,
+      top: userRow.top || 0,
+      banner: userRow.banner || 0,
+      pose: userRow.pose || 0,
+      color: userRow.color || 0,
+      hat_color: userRow.hat_color || 0,
+      top_color: userRow.top_color || 0,
+      banner_color: userRow.banner_color || 0,
+     // days_since_joined: displayString,
       sp: userRow.sp || 0,
       kills: userRow.kills || 0,
       damage: userRow.damage || 0,
       wins: userRow.wins || 0,
       // country_code: userRow.country_code, // Uncomment if country_code is needed
-    };
+    }; 
+
+
+    */
+
+    return [
+      userRow.username || "User",
+      userRow.nickname || "User",
+      userRow.hat || 0,
+      userRow.top || 0,
+      userRow.banner || 0,
+      userRow.pose || 0,
+      userRow.color || 0,
+      userRow.hat_color || 0,
+      userRow.top_color || 0,
+      userRow.banner_color || 0,
+      userRow.sp || 0,
+      userRow.kills || 0,
+      userRow.damage || 0,
+      userRow.wins || 0,
+      // country_code: userRow.country_code, // Uncomment if country_code is needed
+    ].join(":");
+
   } catch (error) {
+    console.log(error)
     throw new Error("An error occurred while fetching user profile");
   }
 }

@@ -11,10 +11,10 @@ async function equipColor(username, type, color) {
   
     // Map the type to the database field
     const validTypes = {
-      "A": "equipped_hat_color",
-      "B": "equipped_body_color",
-      "I": "equipped_banner_color",
-      "P": "equipped_color",
+      "A": "hat_color",
+      "B": "top_color",
+      "I": "banner_color",
+      "P": "color",
     };
   
     const dbField = validTypes[type];

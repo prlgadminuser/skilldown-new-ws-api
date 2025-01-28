@@ -8,6 +8,7 @@ var sanitize = require('mongo-sanitize');
 const { RateLimiterMemory } = require('rate-limiter-flexible');
 const WebSocket = require("ws");
 const http = require('http');
+const LZString = require("lz-string");
 const { verifyPlayer } = require('./routes/verifyPlayer');
 const { getUserInventory } = require('./routes/getinventory');
 const { updateNickname } = require('./routes/updatename');
@@ -18,6 +19,7 @@ const { getdailyreward } = require('./routes/dailyreward');
 const { buyItem } = require('./routes/buyitem');
 const { buyRarityBox } = require('./routes/buyraritybox');
 const { getUserProfile } = require('./routes/getprofile');
+const { setupHighscores, gethighscores } = require('./routes/leaderboard');
 const { createRateLimiter, ConnectionOptionsRateLimit } = require("./limitconfig");
 
 const connectedPlayers = new Map();
@@ -69,20 +71,96 @@ const wss = new WebSocket.Server({
 });
 
 
-function hasDollarSign(data) {
-    return Object.keys(data).some(key => key.includes("$")) || Object.values(data).some(value => value.includes("$"));
+// Function to escape special characters in strings (for MongoDB safety)
+function escapeStringForMongo(input) {
+
+        const input1 = String(input);
+
+    // Escape characters that could interfere with MongoDB queries
+    return input1.replace(/[§.]/g, '');
+}
+
+
+function containsChar(input, char) {
+    // Convert both the input and the character to string
+    const text = String(input);
+    const escapedChar = escapeStringForMongo(char); // Escape the character before use
+    return text.includes(escapedChar);
+}
+
+function containsCharInObject(obj, char) {
+    // Convert the character to string and escape it
+    const escapedChar = escapeStringForMongo(char);
+    
+    // Convert the object to string representation and check for the character
+    if (typeof obj === 'string') {
+        return containsChar(obj, escapedChar);
+    }
+
+    // Handle arrays: Check each item recursively
+    if (Array.isArray(obj)) {
+        return obj.some(item => containsCharInObject(item, escapedChar));
+    }
+
+    // Handle plain objects: Check each value recursively
+    if (obj && typeof obj === 'object') {
+        return Object.values(obj).some(value => containsCharInObject(value, escapedChar));
+    }
+
+    // If the input is neither string, array, nor object, return false
+    return false;
+}
+
+
+function escapeInput(input) {
+    // Handle null, undefined, or other primitive values by converting them to strings
+    if (input === null || input === undefined) {
+        return '';
+    }
+
+    // If input is an object or array, recursively process each value (to handle deeply nested structures)
+    if (typeof input === 'object') {
+        try {
+            // If it's an array or an object, we recursively escape each property or item
+            if (Array.isArray(input)) {
+                return input.map(item => escapeInput(item));
+            } else {
+                return JSON.stringify(input, (key, value) => {
+                    // Recursively escape each key and value
+                    if (typeof value === 'string') {
+                        return value.replace(/[$.]/g, ''); // Escape `$` and `.`
+                    }
+                    return value;
+                });
+            }
+        } catch (e) {
+            // If an error occurs during object processing, return a string representation of the object
+            return String(input);
+        }
+    }
+
+    // For primitive types (string, number, boolean, etc.), directly escape the string value
+    return String(input).replace(/[$.]/g, ''); // Replace `$` and `.`
 }
 
 
 async function handleMessage(ws, message, playerVerified) {
     try {
-        const data = JSON.parse(message.toString());
 
-       // if (hasDollarSign(data)) {
+        const escapedMessage = escapeInput(message.toString());
+     
+        // Parse the sanitized string as JSON
+        const data = JSON.parse(escapedMessage);
 
-          //  throw new Error("validation error");
-  
-       // } 
+           if (typeof message == 'string'){
+
+            const datachunk = message.split(':');
+
+           } else {
+
+           // throw new Error("unexpected message type");
+           }
+        
         let response
 
         switch (data.id) {
@@ -107,7 +185,7 @@ async function handleMessage(ws, message, playerVerified) {
                 break;
 
             case "change_name":
-                response = await updateNickname(playerVerified.playerId, newName);
+                response = await updateNickname(playerVerified.playerId, data.new);
                 ws.send(JSON.stringify({ type: "nickname", data: response }));
                 break;
 
@@ -131,13 +209,18 @@ async function handleMessage(ws, message, playerVerified) {
                 ws.send(JSON.stringify({ type: "openbox", data: response }));
                 break;
 
+            case "highscore":
+                response = await gethighscores()
+                ws.send(JSON.stringify({ type: "highscores", data: response }));
+                break;
+                
+
             default:
                 ws.close(1007,"error");
                 //ws.send(JSON.stringify({ type: "error", message: "Unknown message type" }));
                 break;
         }
     } catch (error) {
-        console.log(error)
         ws.close(1007,"error");
     }
     
@@ -240,8 +323,9 @@ server.on("upgrade", async (request, socket, head) => {
             socket.destroy();
             return;
         }
-
+  
         const token = request.url.split('/')[1].replace(/\$/g, '');
+
 
         try {
             const playerVerified = await verifyPlayer(token);
@@ -339,6 +423,8 @@ function watchItemShop() {
   // Example usage: 
   // Assuming you have a WebSocket server `wss` initialized
  watchItemShop();
+
+ setupHighscores();
 
  process.on("SIGINT", () => {
     changeStream.close();

@@ -8,7 +8,7 @@ async function updateNickname(username, newName) {
 
         // Validate the newNickname parameter
         if (!newNickname) {
-            return { status: "not allowed" };
+            return { status: "not allowed5" };
         }
 
         // Verify newNickname against the nicknameRegex
@@ -35,12 +35,12 @@ async function updateNickname(username, newName) {
         // Fetch the user's current nicknameUpdatedAt timestamp
         const user = await userCollection.findOne(
             { username },
-            { projection: { nicknameUpdatedAt: 1 } } // Only return the nicknameUpdatedAt field
+            { projection: { lastnameupdate: 1 } } // Only return the nicknameUpdatedAt field
         );
 
         // Check if the nickname can be updated based on the cooldown
         const now = Date.now();
-        const lastUpdated = user?.nicknameUpdatedAt || 0; // Default to epoch if no timestamp exists
+        const lastUpdated = user?.lastnameupdate || 0; // Default to epoch if no timestamp exists
         const timeDiff = now - lastUpdated; // Difference in milliseconds
 
         const cooldownPeriod = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -58,12 +58,12 @@ async function updateNickname(username, newName) {
             { 
                 $set: { 
                     nickname: newNickname, 
-                    nicknameUpdatedAt: Date.now() // Set current timestamp as nicknameUpdatedAt 
+                    lastnameupdate: Date.now() // Set current timestamp as nicknameUpdatedAt 
                 } 
             }
         );
 
-        return { status: "success" };
+        return { status: "success", t: Date.now()};
     } catch (error) {
 
         throw new Error("Err");
