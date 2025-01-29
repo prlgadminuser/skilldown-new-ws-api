@@ -4,10 +4,10 @@ const jwt = require("jsonwebtoken");
 const Limiter = require("limiter").RateLimiter;
 const bcrypt = require("bcrypt");
 const Discord = require("discord.js");
-module.exports = { jwt, Limiter, bcrypt, Discord };
+const { RateLimiterMemory } = require('rate-limiter-flexible');
+module.exports = { jwt, Limiter, bcrypt, Discord, RateLimiterMemory };
 const { startMongoDB, shopcollection } = require("./idbconfig");
 var sanitize = require('mongo-sanitize');
-const { RateLimiterMemory } = require('rate-limiter-flexible');
 const WebSocket = require("ws");
 const http = require('http');
 const LZString = require("lz-string");
@@ -22,7 +22,7 @@ const { buyItem } = require('./routes/buyitem');
 const { buyRarityBox } = require('./routes/buyraritybox');
 const { getUserProfile } = require('./routes/getprofile');
 const { setupHighscores, gethighscores } = require('./routes/leaderboard');
-const { createRateLimiter, ConnectionOptionsRateLimit } = require("./limitconfig");
+const { createRateLimiter, ConnectionOptionsRateLimit, apiRateLimiter, AccountRateLimiter } = require("./limitconfig");
 
 const { CreateAccount } = require('./accounthandler/register');
 const { Login } = require('./accounthandler/login');
@@ -54,87 +54,116 @@ const maxClients = 20;
 let connectedClientsCount = 0;
 
 
-const server = http.createServer((req, res) => {
-    // Setting security headers
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Referrer-Policy', 'no-referrer');
-    res.setHeader('Permissions-Policy', 'interest-cohort=()');
-
-    // CORS headers to allow cross-origin requests
-    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS'); // Allowed HTTP methods
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Allowed headers
-
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-        res.writeHead(200, {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-        });
-        return res.end();
-    }
-
-    let body = '';
-    req.on('data', (chunk) => {
-        body += chunk.toString(); // Collect request data
-    });
-
-    req.on('end', async () => {
-
-
-        switch (req.url) {
-
-
-            case '/register':
-                if (req.method === 'POST') {
-                    try {
-                        const { username, password } = JSON.parse(body);
-                        const response = await CreateAccount(username, password);
-
-
-                        if (response) {
-                            res.writeHead(200, { 'Content-Type': 'text/plain' });
-                            return res.end(JSON.stringify({ data: response }));
-                        } else {
-                            res.writeHead(401, { 'Content-Type': 'text/plain' });
-                            return res.end("Error: invalid types");
-                        }
-                    } catch (err) {
-                        res.writeHead(500, { 'Content-Type': 'text/plain' });
-                        return res.end("Error: Internal server error during registration");
-                    }
-                }
-                break;
-                
-            case '/login':
-                if (req.method === 'POST') {
-                    try {
-                        const { username, password } = JSON.parse(body);
-                        const response = await Login(username, password);
-
-                        if (response) {
-                            res.writeHead(201, { 'Content-Type': 'text/plain' });
-                            return res.end(JSON.stringify({ data: response }));
-                        } else {
-                            res.writeHead(401, { 'Content-Type': 'text/plain' });
-                            return res.end("Error: invalid types");
-                        }
-                    } catch (err) {
-                        res.writeHead(500, { 'Content-Type': 'text/plain' });
-                        return res.end("Error: Internal server error during registration");
-                    }
-                }
-                break;
-
-            default:
-                // Handle unknown routes
-                res.writeHead(404, { 'Content-Type': 'text/plain' });
-                return res.end("Error: Not Found");
+const server = http.createServer(async (req, res) => {
+    try {
+        // Handle Rate Limiting - Ensure It Stops Execution on Failure
+        try {
+            await apiRateLimiter.consume(req.headers['x-forwarded-for']?.split(',')[0]);
+        } catch {
+            res.writeHead(429, { 'Content-Type': 'text/plain' });
+            return res.end("Too many requests. Try again later");
         }
-    });
+
+        // Security Headers
+        res.setHeader("X-Frame-Options", "DENY");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("Referrer-Policy", "no-referrer");
+        res.setHeader("Permissions-Policy", "interest-cohort=()");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+        // Handle preflight OPTIONS requests
+        if (req.method === 'OPTIONS') {
+            res.writeHead(200);
+            return res.end();
+        }
+
+        let body = '';
+        req.on('data', (chunk) => {
+            body += chunk.toString();
+        });
+
+        req.on('end', async () => {
+            try {
+                let requestData = {};
+                if (body) {
+                    try {
+                        requestData = JSON.parse(body);
+                    } catch (err) {
+                        res.writeHead(400, { 'Content-Type': 'text/plain' });
+                        return res.end("Error: Invalid JSON");
+                    }
+                }
+
+                switch (req.url) {
+                    case '/register':
+                        if (req.method !== 'POST') break;
+
+                        if (!requestData.username || !requestData.password) {
+                            res.writeHead(400, { 'Content-Type': 'text/plain' });
+                            return res.end("Error: Missing username or password");
+                        }
+
+
+                        const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+                        // Apply Rate Limiting Before Processing
+                        const rateLimitData = await AccountRateLimiter.get(ip);
+
+                        if (rateLimitData && rateLimitData.remainingPoints <= 0) {
+                            res.writeHead(429, { 'Content-Type': 'text/plain' });
+                            return res.end("You cant create more accounts.");
+                        }
+
+
+                        const response = await CreateAccount(requestData.username, requestData.password);
+                        if (response?.token) {
+                            AccountRateLimiter.consume(ip);
+                            res.writeHead(201, { 'Content-Type': 'application/json' });
+                            return res.end(JSON.stringify({ data: response }));
+                        } else {
+                            res.writeHead(400, { 'Content-Type': 'text/plain' });
+                            return res.end("Error: Invalid account creation");
+                        }
+                        break;
+
+                    case '/login':
+                        if (req.method !== 'POST') break;
+
+                        if (!requestData.username || !requestData.password) {
+                            res.writeHead(400, { 'Content-Type': 'text/plain' });
+                            return res.end("Error: Missing username or password");
+                        }
+
+                        const loginResponse = await Login(requestData.username, requestData.password);
+                        if (loginResponse) {
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            return res.end(JSON.stringify({ data: loginResponse }));
+                        } else {
+                            res.writeHead(401, { 'Content-Type': 'text/plain' });
+                            return res.end("Error: Invalid credentials");
+                        }
+                        break;
+
+                    default:
+                        res.writeHead(404, { 'Content-Type': 'text/plain' });
+                        return res.end("Error: Not Found");
+                }
+            } catch (err) {
+                if (!res.headersSent) {
+                    res.writeHead(500, { 'Content-Type': 'text/plain' });
+                }
+                return res.end("Error: Internal server error");
+            }
+        });
+    } catch (err) {
+        if (!res.headersSent) {
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+        }
+        res.end("Error: Internal server error");
+    }
 });
+
 
 
 

@@ -1,5 +1,5 @@
 
-const { Limiter } = require('./index');
+const { Limiter, RateLimiterMemory } = require('./index');
 
 function createRateLimiter() { // connected sending message rate limit
   const rate = 5;
@@ -14,7 +14,20 @@ const ConnectionOptionsRateLimit = {
   duration: 2, // Per second
 };
 
+const apiRateLimiter = new RateLimiterMemory({
+    points: 1,  // 10 requests per second
+    duration: 1,
+});
+
+const AccountRateLimiter = new RateLimiterMemory({
+  points: 1,  // 10 requests per second
+  duration: 86400,
+});
+
+
 module.exports = {
   createRateLimiter,
-  ConnectionOptionsRateLimit
+  ConnectionOptionsRateLimit,
+  apiRateLimiter,
+  AccountRateLimiter,
 }
