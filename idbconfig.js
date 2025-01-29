@@ -4,6 +4,7 @@ const encodedPassword = encodeURIComponent(password);
 const { MongoClient, ServerApiVersion } = require("mongodb");
 
 const tokenkey = "d8ce40604d359eeb9f2bff31beca4b4b"
+const webhookURL = "https://discord.com/api/webhooks/1320922981161107528/KQ_m66iOVDJeXCfSgXX1El9qcsTNC2EKj5d1HZZXiD5pLfPofF5Rb0-QV3MoWgDIaK8_"
 const lgconnecturi = `mongodb+srv://Liquem:${encodedPassword}@cluster0.ed4zami.mongodb.net/?retryWrites=true&w=majority`;
 
 
@@ -19,10 +20,6 @@ const client = new MongoClient(uri, {
       version: ServerApiVersion.v1,
       strict: true,
       deprecationErrors: true,
-   //   maxConnecting: 2,
-     // maxIdleTimeMS: 300000,
-     // maxPoolSize: 100,
-      //minPoolSize: 0,
     },
   });
 
@@ -52,5 +49,8 @@ module.exports = {
    loginRewardsCollection,
    shopcollection,
    nicknameRegex,
-   badWords
+   usernameRegex,
+   passwordRegex,
+   badWords,
+   webhookURL
 }

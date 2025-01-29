@@ -2,7 +2,9 @@
 
 const jwt = require("jsonwebtoken");
 const Limiter = require("limiter").RateLimiter;
-module.exports = { jwt, Limiter };
+const bcrypt = require("bcrypt");
+const Discord = require("discord.js");
+module.exports = { jwt, Limiter, bcrypt, Discord };
 const { startMongoDB, shopcollection } = require("./idbconfig");
 var sanitize = require('mongo-sanitize');
 const { RateLimiterMemory } = require('rate-limiter-flexible');
@@ -22,10 +24,12 @@ const { getUserProfile } = require('./routes/getprofile');
 const { setupHighscores, gethighscores } = require('./routes/leaderboard');
 const { createRateLimiter, ConnectionOptionsRateLimit } = require("./limitconfig");
 
+const { CreateAccount } = require('./accounthandler/register');
+const { Login } = require('./accounthandler/login');
+
 const connectedPlayers = new Map();
 const playerQueue = new Map();
-
-let maintenanceMode = false
+let maintenanceMode = false;
 
 const allowedOrigins = [
     "https://slcount.netlify.app",
@@ -49,123 +53,117 @@ const pingInterval = 10000; // 10 seconds for ping-pong check
 const maxClients = 20;
 let connectedClientsCount = 0;
 
+
 const server = http.createServer((req, res) => {
-    // Set security headers
+    // Setting security headers
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('Permissions-Policy', 'interest-cohort=()');
-  
-    // Handle request and send a response
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('qs\n');
+
+    // CORS headers to allow cross-origin requests
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS'); // Allowed HTTP methods
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Allowed headers
+
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        res.writeHead(200, {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        });
+        return res.end();
+    }
+
+    let body = '';
+    req.on('data', (chunk) => {
+        body += chunk.toString(); // Collect request data
+    });
+
+    req.on('end', async () => {
+
+
+        switch (req.url) {
+
+
+            case '/register':
+                if (req.method === 'POST') {
+                    try {
+                        const { username, password } = JSON.parse(body);
+                        const response = await CreateAccount(username, password);
+
+
+                        if (response) {
+                            res.writeHead(200, { 'Content-Type': 'text/plain' });
+                            return res.end(JSON.stringify({ data: response }));
+                        } else {
+                            res.writeHead(401, { 'Content-Type': 'text/plain' });
+                            return res.end("Error: invalid types");
+                        }
+                    } catch (err) {
+                        res.writeHead(500, { 'Content-Type': 'text/plain' });
+                        return res.end("Error: Internal server error during registration");
+                    }
+                }
+                break;
+                
+            case '/login':
+                if (req.method === 'POST') {
+                    try {
+                        const { username, password } = JSON.parse(body);
+                        const response = await Login(username, password);
+
+                        if (response) {
+                            res.writeHead(201, { 'Content-Type': 'text/plain' });
+                            return res.end(JSON.stringify({ data: response }));
+                        } else {
+                            res.writeHead(401, { 'Content-Type': 'text/plain' });
+                            return res.end("Error: invalid types");
+                        }
+                    } catch (err) {
+                        res.writeHead(500, { 'Content-Type': 'text/plain' });
+                        return res.end("Error: Internal server error during registration");
+                    }
+                }
+                break;
+
+            default:
+                // Handle unknown routes
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                return res.end("Error: Not Found");
+        }
+    });
 });
+
+
+
+
+
+
 
 const wss = new WebSocket.Server({
     noServer: true,
     clientTracking: false,
     perMessageDeflate: false,
     proxy: true,
-    maxPayload: 100
-    , // 10MB max payload
+    maxPayload: 80, // 10MB max payload
 });
-
 
 // Function to escape special characters in strings (for MongoDB safety)
 function escapeStringForMongo(input) {
-
-        const input1 = String(input);
-
-    // Escape characters that could interfere with MongoDB queries
-    return input1.replace(/[§.]/g, '');
+    return String(input).replace(/[§.]/g, '');
 }
-
-
-function containsChar(input, char) {
-    // Convert both the input and the character to string
-    const text = String(input);
-    const escapedChar = escapeStringForMongo(char); // Escape the character before use
-    return text.includes(escapedChar);
-}
-
-function containsCharInObject(obj, char) {
-    // Convert the character to string and escape it
-    const escapedChar = escapeStringForMongo(char);
-    
-    // Convert the object to string representation and check for the character
-    if (typeof obj === 'string') {
-        return containsChar(obj, escapedChar);
-    }
-
-    // Handle arrays: Check each item recursively
-    if (Array.isArray(obj)) {
-        return obj.some(item => containsCharInObject(item, escapedChar));
-    }
-
-    // Handle plain objects: Check each value recursively
-    if (obj && typeof obj === 'object') {
-        return Object.values(obj).some(value => containsCharInObject(value, escapedChar));
-    }
-
-    // If the input is neither string, array, nor object, return false
-    return false;
-}
-
-
-function escapeInput(input) {
-    // Handle null, undefined, or other primitive values by converting them to strings
-    if (input === null || input === undefined) {
-        return '';
-    }
-
-    // If input is an object or array, recursively process each value (to handle deeply nested structures)
-    if (typeof input === 'object') {
-        try {
-            // If it's an array or an object, we recursively escape each property or item
-            if (Array.isArray(input)) {
-                return input.map(item => escapeInput(item));
-            } else {
-                return JSON.stringify(input, (key, value) => {
-                    // Recursively escape each key and value
-                    if (typeof value === 'string') {
-                        return value.replace(/[$.]/g, ''); // Escape `$` and `.`
-                    }
-                    return value;
-                });
-            }
-        } catch (e) {
-            // If an error occurs during object processing, return a string representation of the object
-            return String(input);
-        }
-    }
-
-    // For primitive types (string, number, boolean, etc.), directly escape the string value
-    return String(input).replace(/[$.]/g, ''); // Replace `$` and `.`
-}
-
 
 async function handleMessage(ws, message, playerVerified) {
     try {
-
         const escapedMessage = escapeInput(message.toString());
-     
-        // Parse the sanitized string as JSON
         const data = JSON.parse(escapedMessage);
 
-           if (typeof message == 'string'){
-
-            const datachunk = message.split(':');
-
-           } else {
-
-           // throw new Error("unexpected message type");
-           }
-        
-        let response
+        let response;
 
         switch (data.id) {
-
-            case "ping":        // Handle ping message and update last pong time
+            case "ping":
                 ws.playerVerified.lastPongTime = Date.now();
                 break;
 
@@ -190,124 +188,121 @@ async function handleMessage(ws, message, playerVerified) {
                 break;
 
             case "shopdata":
-                response = await getshopdata()
+                response = await getshopdata();
                 ws.send(JSON.stringify({ type: "shopdata", data: response }));
                 break;
 
             case "buyitem":
-                response = await buyItem(playerVerified.playerId, data.buyid)
+                response = await buyItem(playerVerified.playerId, data.buyid);
                 ws.send(JSON.stringify({ type: "buyitem", data: response }));
                 break;
 
             case "profile":
-                response = await getUserProfile(data.pid)
+                response = await getUserProfile(data.pid);
                 ws.send(JSON.stringify({ type: "profile", data: response }));
-                break;    
+                break;
 
             case "openbox":
-                response = await buyRarityBox(playerVerified.playerId)
+                response = await buyRarityBox(playerVerified.playerId);
                 ws.send(JSON.stringify({ type: "openbox", data: response }));
                 break;
 
             case "highscore":
-                response = await gethighscores()
+                response = await gethighscores();
                 ws.send(JSON.stringify({ type: "highscores", data: response }));
                 break;
-                
 
             default:
-                ws.close(1007,"error");
-                //ws.send(JSON.stringify({ type: "error", message: "Unknown message type" }));
+                ws.close(1007, "error");
                 break;
         }
     } catch (error) {
-        ws.close(1007,"error");
+        ws.close(1007, "error");
     }
-    
 }
 
+function escapeInput(input) {
+    if (input === null || input === undefined) return '';
+    if (typeof input === 'object') {
+        return JSON.stringify(input, (key, value) => {
+            if (typeof value === 'string') {
+                return value.replace(/[$.]/g, '');
+            }
+            return value;
+        });
+    }
+    return String(input).replace(/[$.]/g, '');
+}
 
-  const rateLimiterConnection = new RateLimiterMemory(ConnectionOptionsRateLimit);
-
+const rateLimiterConnection = new RateLimiterMemory(ConnectionOptionsRateLimit);
 
 wss.on("connection", (ws, req) => {
-
     if (maintenanceMode) {
-        ws.close(4000, "maintenance")
+        ws.close(4000, "maintenance");
+        return;
     }
 
     console.log("Client connected");
 
     const playerVerified = ws.playerVerified;
     playerVerified.lastPongTime = Date.now();
-    playerVerified.rateLimiter = createRateLimiter() // Set initial pong time
+    playerVerified.rateLimiter = createRateLimiter();
 
     ws.send(JSON.stringify({ type: "connection_success", accdata: playerVerified.inventory }));
 
-    // Start ping-pong check every 10 seconds
     const pingIntervalId = setInterval(() => {
-        if (ws && playerVerified.lastPongTime > Date.now() - 10000) {
+        if (ws && playerVerified.lastPongTime > Date.now() - pingInterval) {
         } else {
-
-            ws.close(3845 ,"activity timeout",)
+            ws.close(3845, "activity timeout");
         }
     }, pingInterval);
 
     ws.on("message", async (message) => {
         try {
-            const playerVerified = ws.playerVerified;
-
             if (!playerVerified.rateLimiter.tryRemoveTokens(1)) {
-
-                ws.close(1007)
-
+                ws.close(1007);
                 return;
             }
 
-            
             await handleMessage(ws, message, playerVerified);
         } catch (error) {
-                    //ws.send(JSON.stringify({ type: "error", message: "Failed to process message" }));
-                }
-            }
-    );
+            ws.close(1007, "error");
+        }
+    });
 
     ws.on("error", (error) => {
         if (error.message.includes('payload size')) {
             console.error('Payload size exceeded:', error.message);
-            ws.close(1009, "Payload size exceeded"); // 1009: Close code for too large payload
+            ws.close(1009, "Payload size exceeded");
         } else {
             console.error('WebSocket error:', error);
         }
     });
 
     ws.on("close", () => {
-        clearInterval(pingIntervalId); // Clear ping-pong interval on disconnect
+        clearInterval(pingIntervalId);
 
         const playerId = ws.playerVerified?.playerId;
 
         if (playerId) {
-            // Remove from connected players map
             connectedPlayers.delete(playerId);
             connectedClientsCount--;
 
-            // Optionally handle the player in the queue if they are there
             if (playerQueue.has(playerId)) {
                 playerQueue.delete(playerId);
                 console.log(`Player ${playerId} removed from queue due to disconnection.`);
             }
-
         }
     });
 });
 
+
 server.on("upgrade", async (request, socket, head) => {
     try {
-        const ip = request.socket.remoteAddress//request.socket.remoteAddress//req.headers['x-forwarded-for']?.split(',')[0] || request.socket.remoteAddress;
-        console.log(ip)
+        const ip = request.socket.remoteAddress;
 
         if (!ip) return;
-        // Consume rate limit for the IP
+
         await rateLimiterConnection.consume(ip);
 
         if (connectedClientsCount >= maxClients) {
@@ -318,71 +313,38 @@ server.on("upgrade", async (request, socket, head) => {
 
         const origin = request.headers.origin;
         if (!allowedOrigins.includes(origin)) {
-            console.error(`Unauthorized origin: ${origin}`);
             socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
             socket.destroy();
             return;
         }
-  
-        const token = request.url.split('/')[1].replace(/\$/g, '');
 
+        const token = request.url.split('/')[1].replace(/\$/g, '');
 
         try {
             const playerVerified = await verifyPlayer(token);
 
-            // Check for existing connection
             const existingConnection = connectedPlayers.get(playerVerified.playerId);
-
             if (existingConnection) {
-                console.log(`Player ${playerVerified.playerId} already connected. Closing the existing connection.`);
                 existingConnection.close(1001, "Reassigned connection");
-
-                // Wait for the existing connection to close
                 await new Promise(resolve => existingConnection.on('close', resolve));
                 connectedPlayers.delete(playerVerified.playerId);
             }
 
-            // Handle WebSocket upgrade
             wss.handleUpgrade(request, socket, head, (ws) => {
                 ws.playerVerified = playerVerified;
-
-                // Add the new connection to the map
                 connectedPlayers.set(playerVerified.playerId, ws);
-
-                // Handle cleanup on disconnection
-                ws.on("close", () => {
-                    const playerId = ws.playerVerified?.playerId;
-                    if (playerId) {
-                        connectedPlayers.delete(playerId);
-                    }
-                    connectedClientsCount--;
-                    console.log(`Player ${playerVerified.playerId} disconnected`);
-                });
-
-                // Increment connected clients count
                 connectedClientsCount++;
-
-                // Emit the connection event
                 wss.emit("connection", ws, request);
             });
-
         } catch (error) {
-            console.error('Token verification failed:', error.message);
             socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
             socket.destroy();
         }
-
     } catch (error) {
-        if ("ratelimit") {
-            socket.write('HTTP/1.1 429 Too Many Requests\r\n\r\n');
-        } else {
-            console.error('Unexpected error:', error);
-            socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
-        }
+        socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
         socket.destroy();
     }
 });
-
 
 const PORT = process.env.PORT || 3090;
 
@@ -392,59 +354,53 @@ startMongoDB().then(() => {
     });
 });
 
-
 function watchItemShop() {
     const pipeline = [{ $match: { "fullDocument._id": { $in: ["dailyItems", "maintenance"] }, operationType: "update" } }];
     let changeStream;
-  
+
     const startChangeStream = () => {
-      changeStream = shopcollection.watch(pipeline, { fullDocument: "updateLookup" });
-  
-      changeStream.on("change", (change) => {
-        const docId = change.fullDocument._id;
-        if (docId === "dailyItems") {
-          broadcast("shopupdate");
-        } else if (docId === "maintenance") {
-          maintenanceMode = change.fullDocument.status === "true";
-          broadcast("maintenanceupdate");
-          if (maintenanceMode) closeAllClients(4001, "maintenance");
-        }
-      });
-  
-      changeStream.on("error", (err) => {
-        console.error("Change stream error:", err);
-        setTimeout(startChangeStream, 5000); // Retry after delay
-      });
+        changeStream = shopcollection.watch(pipeline, { fullDocument: "updateLookup" });
+
+        changeStream.on("change", (change) => {
+            const docId = change.fullDocument._id;
+            if (docId === "dailyItems") {
+                broadcast("shopupdate");
+            } else if (docId === "maintenance") {
+                maintenanceMode = change.fullDocument.status === "true";
+                broadcast("maintenanceupdate");
+                if (maintenanceMode) closeAllClients(4001, "maintenance");
+            }
+        });
+
+        changeStream.on("error", (err) => {
+            console.error("Change stream error:", err);
+            setTimeout(startChangeStream, 5000); // Retry after delay
+        });
     };
-  
+
     startChangeStream();
-  }
-  
-  // Example usage: 
-  // Assuming you have a WebSocket server `wss` initialized
- watchItemShop();
+}
 
- setupHighscores();
+// Example usage: 
+watchItemShop();
 
- process.on("SIGINT", () => {
+setupHighscores();
+
+process.on("SIGINT", () => {
     changeStream.close();
     console.log("Change stream closed on SIGINT");
     process.exit();
-  });
+});
 
- function broadcast(message) {
+function broadcast(message) {
     const msg = JSON.stringify({ update: message });
     connectedPlayers.forEach((ws) => ws.readyState === WebSocket.OPEN && ws.send(msg));
-  }
-  
-  // Disconnect all clients
-  function closeAllClients(code, reason) {
+}
+
+function closeAllClients(code, reason) {
     connectedPlayers.forEach((ws) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close(code, reason);
-      }
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.close(code, reason);
+        }
     });
-  }
-  
-  
-  
+}
