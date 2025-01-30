@@ -18,8 +18,8 @@ function createRateLimiter() { // connected sending message rate limit
 }
 
 const getClientIp = (req) => {
-  const clientip = req.connection.remoteAddress
-  //console.log(clientip
+  const clientip = req.headers['x-forwarded-for']?.split(',')[0]
+  console.log(clientip)
   return clientip
 };
 // back4app ip = req.headers['x-forwarded-for']?.split(',')[0]
