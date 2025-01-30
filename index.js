@@ -50,17 +50,18 @@ const server = http.createServer(async (req, res) => {
             return res.end("Too many requests. Try again later");
         }
 
-       // const origin = req.headers.origin;
-       // if (!allowedOrigins.includes(origin)) {
-        //    res.writeHead(429, { 'Content-Type': 'text/plain' });
-         //   return res.end("Unauthorized");
-       // }
+        const origin = req.headers.origin;
+        if (!allowedOrigins.includes(origin)) {
+            res.writeHead(429, { 'Content-Type': 'text/plain' });
+            return res.end("Unauthorized");
+        }
 
         // Security Headers
         res.setHeader("X-Frame-Options", "DENY");
         res.setHeader("X-Content-Type-Options", "nosniff");
         res.setHeader("Referrer-Policy", "no-referrer");
         res.setHeader("Permissions-Policy", "interest-cohort=()");
+        res.setHeader("Access-Control-Allow-Origin", origin);
         res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
