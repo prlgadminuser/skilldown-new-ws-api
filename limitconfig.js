@@ -50,7 +50,7 @@ const allowedOrigins = [
     "https://html-classic.itch.zone",
     "null",
     "https://turbowarp.org",
-    "https://liquemgames.itch.io/sr",
+    "https://liquemgames.itch.io/sd",
     "https://s-r.netlify.app",
     "https://uploads.ungrounded.net",
     "https://prod-dpgames.crazygames.com",
