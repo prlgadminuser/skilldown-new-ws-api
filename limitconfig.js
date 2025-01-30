@@ -18,7 +18,7 @@ function createRateLimiter() { // connected sending message rate limit
 }
 
 const getClientIp = (req) => {
-  const clientip = req.headers['x-forwarded-for']?.split(',')[0]
+  const clientip = req.headers['true-client-ip']
   //console.log(clientip
   return clientip
 };
