@@ -1,2 +1,2 @@
-- install command = npm install mongodb jsonwebtoken limiter mongo-sanitize rate-limiter-flexible ws http bcrypt discord.js
+- install command = npm install mongodb jsonwebtoken limiter mongo-sanitize rate-limiter-flexible ws http bcrypt discord.js lz-string
 - run command = node index.js 
