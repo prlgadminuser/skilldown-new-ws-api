@@ -52,7 +52,7 @@ const server = http.createServer(async (req, res) => {
 
         const origin = req.headers.origin;
         if (!allowedOrigins.includes(origin)) {
-                console.log("invalid origin")
+                console.log("invalid origin", origin)
             res.writeHead(429, { 'Content-Type': 'text/plain' });
             return res.end("Unauthorized");
         }
