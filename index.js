@@ -78,7 +78,7 @@ const server = http.createServer(async (req, res) => {
                 return res.end("Unauthorized");
             }
             body += chunk.toString();
-            body = escapeInput(body.toString());
+         //   body = escapeInput(body.toString());
         });
 
         req.on('end', async () => {
