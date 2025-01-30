@@ -8,9 +8,9 @@ const webhookURL = "https://discord.com/api/webhooks/1320922981161107528/KQ_m66i
 const lgconnecturi = `mongodb+srv://Liquem:${encodedPassword}@cluster0.ed4zami.mongodb.net/?retryWrites=true&w=majority`;
 
 
-const nicknameRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\| {2,}|:))(?!^\s)(?!.*\s$)(?!.*\s{2,}).{4,16}$/u;
-const usernameRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s|:)).{4,16}$/u;
-const passwordRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s)).{4,20}$/u;
+const nicknameRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s|:|\$)).{4,16}$/u;
+const usernameRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s|:|\$)).{4,16}$/u;
+const passwordRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s|\$)).{4,20}$/u;
 const badWords = ["undefined", "null", "liquem", "nigga", "nigger", "niga", "fuck", "ass", "bitch", "hure", "schlampe", "hitler", "whore"]; 
 
 const uri = lgconnecturi
@@ -26,7 +26,7 @@ const client = new MongoClient(uri, {
 async function startMongoDB() {
     try {
         await client.connect();
-        console.log("connectedtodatabase")
+       console.log("Connected to MongoDB")
 
     } catch (error) {
         console.error("Error connecting to MongoDB:", error);

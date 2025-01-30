@@ -1,6 +1,14 @@
 
 const { Limiter, RateLimiterMemory } = require('./index');
 
+
+const ws_message_size_limit = 50
+const api_message_size_limit = 100
+const pingInterval = 10000;
+const maxClients = 20; // max connected players for websocket
+let maintenanceMode = false;
+
+
 function createRateLimiter() { // connected sending message rate limit
   const rate = 5;
   return new Limiter({
@@ -9,13 +17,22 @@ function createRateLimiter() { // connected sending message rate limit
   });
 }
 
+const getClientIp = (req) => {
+  const clientip = req.headers['x-forwarded-for']?.split(',')[0]
+  //console.log(clientip)
+  return clientip
+};
+// back4app ip = req.headers['x-forwarded-for']?.split(',')[0]
+// render ip = req.headers['true-client-ip']
+// test ip = req.connection.remoteAddress;
+
 const ConnectionOptionsRateLimit = { 
   points: 1, // Number of points
   duration: 2, // Per second
 };
 
 const apiRateLimiter = new RateLimiterMemory({
-    points: 1,  // 10 requests per second
+    points: 3,  // 10 requests per second
     duration: 1,
 });
 
@@ -24,10 +41,37 @@ const AccountRateLimiter = new RateLimiterMemory({
   duration: 86400,
 });
 
+const allowedOrigins = [
+    "https://slcount.netlify.app",
+    "https://slgame.netlify.app",
+    "https://serve.gamejolt.net",
+    "http://serve.gamejolt.net",
+    "tw-editor://.",
+    "https://html-classic.itch.zone",
+    "null",
+    "https://turbowarp.org",
+    "https://liquemgames.itch.io/sr",
+    "https://s-r.netlify.app",
+    "https://uploads.ungrounded.net",
+    "https://prod-dpgames.crazygames.com",
+    "https://crazygames.com",
+    "https://crazygames.com/game/skilled-royale",
+    "https://s-ri0p-delgae.netlify.app",
+];
+
+
+
 
 module.exports = {
   createRateLimiter,
   ConnectionOptionsRateLimit,
   apiRateLimiter,
   AccountRateLimiter,
+  getClientIp,
+  ws_message_size_limit,
+  api_message_size_limit,
+  maxClients,
+  maintenanceMode,
+  pingInterval,
+  allowedOrigins,
 }

@@ -22,46 +22,38 @@ const { buyItem } = require('./routes/buyitem');
 const { buyRarityBox } = require('./routes/buyraritybox');
 const { getUserProfile } = require('./routes/getprofile');
 const { setupHighscores, gethighscores } = require('./routes/leaderboard');
-const { createRateLimiter, ConnectionOptionsRateLimit, apiRateLimiter, AccountRateLimiter } = require("./limitconfig");
-
+const { createRateLimiter, ConnectionOptionsRateLimit, apiRateLimiter, AccountRateLimiter, 
+        getClientIp, ws_message_size_limit, api_message_size_limit, maxClients, maintenanceMode, pingInterval, allowedOrigins } = require("./limitconfig");
 const { CreateAccount } = require('./accounthandler/register');
 const { Login } = require('./accounthandler/login');
 
 const connectedPlayers = new Map();
 const playerQueue = new Map();
-let maintenanceMode = false;
 
-const allowedOrigins = [
-    "https://slcount.netlify.app",
-    "https://slgame.netlify.app",
-    "https://serve.gamejolt.net",
-    "http://serve.gamejolt.net",
-    "tw-editor://.",
-    "https://html-classic.itch.zone",
-    "null",
-    "https://turbowarp.org",
-    "https://liquemgames.itch.io/sr",
-    "https://s-r.netlify.app",
-    "https://uploads.ungrounded.net",
-    "https://prod-dpgames.crazygames.com",
-    "https://crazygames.com",
-    "https://crazygames.com/game/skilled-royale",
-    "https://s-ri0p-delgae.netlify.app",
-];
-
-const pingInterval = 10000; // 10 seconds for ping-pong check
-const maxClients = 20;
 let connectedClientsCount = 0;
-
 
 const server = http.createServer(async (req, res) => {
     try {
+
+        const ip = getClientIp(req);
+
+        if (!ip) {
+            res.writeHead(429, { 'Content-Type': 'text/plain' });
+            return res.end("Unauthorized");
+        }
+
         // Handle Rate Limiting - Ensure It Stops Execution on Failure
         try {
-            await apiRateLimiter.consume(req.headers['x-forwarded-for']?.split(',')[0]);
+            await apiRateLimiter.consume(ip);
         } catch {
             res.writeHead(429, { 'Content-Type': 'text/plain' });
             return res.end("Too many requests. Try again later");
+        }
+
+        const origin = req.headers.origin;
+        if (!allowedOrigins.includes(origin)) {
+            res.writeHead(429, { 'Content-Type': 'text/plain' });
+            return res.end("Unauthorized");
         }
 
         // Security Headers
@@ -81,6 +73,10 @@ const server = http.createServer(async (req, res) => {
 
         let body = '';
         req.on('data', (chunk) => {
+            if (chunk.length > api_message_size_limit) {
+                res.writeHead(429, { 'Content-Type': 'text/plain' });
+                return res.end("Unauthorized");
+            }
             body += chunk.toString();
         });
 
@@ -106,7 +102,7 @@ const server = http.createServer(async (req, res) => {
                         }
 
 
-                        const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+                        const ip = getClientIp(req);
                         // Apply Rate Limiting Before Processing
                         const rateLimitData = await AccountRateLimiter.get(ip);
 
@@ -165,18 +161,12 @@ const server = http.createServer(async (req, res) => {
 });
 
 
-
-
-
-
-
-
 const wss = new WebSocket.Server({
     noServer: true,
     clientTracking: false,
     perMessageDeflate: false,
     proxy: true,
-    maxPayload: 80, // 10MB max payload
+    maxPayload: ws_message_size_limit, // 10MB max payload
 });
 
 // Function to escape special characters in strings (for MongoDB safety)
@@ -185,6 +175,7 @@ function escapeStringForMongo(input) {
 }
 
 async function handleMessage(ws, message, playerVerified) {
+
     try {
         const escapedMessage = escapeInput(message.toString());
         const data = JSON.parse(escapedMessage);
@@ -271,11 +262,11 @@ wss.on("connection", (ws, req) => {
         return;
     }
 
-    console.log("Client connected");
-
     const playerVerified = ws.playerVerified;
     playerVerified.lastPongTime = Date.now();
     playerVerified.rateLimiter = createRateLimiter();
+
+    //console.log(playerVerified.playerId, "connected");
 
     ws.send(JSON.stringify({ type: "connection_success", accdata: playerVerified.inventory }));
 
@@ -319,7 +310,7 @@ wss.on("connection", (ws, req) => {
 
             if (playerQueue.has(playerId)) {
                 playerQueue.delete(playerId);
-                console.log(`Player ${playerId} removed from queue due to disconnection.`);
+               // console.log(`Player ${playerId} removed from queue due to disconnection.`);
             }
         }
     });
@@ -328,21 +319,26 @@ wss.on("connection", (ws, req) => {
 
 server.on("upgrade", async (request, socket, head) => {
     try {
-        const ip = request.socket.remoteAddress;
+        const ip = getClientIp(request);
 
-        if (!ip) return;
+        if (!ip || request.url.length > 200) return;
 
         await rateLimiterConnection.consume(ip);
 
-        if (connectedClientsCount >= maxClients) {
-            socket.write('HTTP/1.1 503 Service Unavailable\r\n\r\n');
-            socket.destroy();
-            return;
+        if (chunk.length > api_message_size_limit) {
+            res.writeHead(429, { 'Content-Type': 'text/plain' });
+            return res.end("Unauthorized");
         }
 
         const origin = request.headers.origin;
         if (!allowedOrigins.includes(origin)) {
             socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+            socket.destroy();
+            return;
+        }
+
+        if (connectedClientsCount >= maxClients) {
+            socket.write('HTTP/1.1 503 Service Unavailable\r\n\r\n');
             socket.destroy();
             return;
         }
@@ -379,7 +375,7 @@ const PORT = process.env.PORT || 3090;
 
 startMongoDB().then(() => {
     server.listen(PORT, () => {
-        console.log(`WebSocket server is listening on port ${PORT}`);
+       console.log(`Server started on Port ${PORT}`);
     });
 });
 
@@ -417,7 +413,6 @@ setupHighscores();
 
 process.on("SIGINT", () => {
     changeStream.close();
-    console.log("Change stream closed on SIGINT");
     process.exit();
 });
 

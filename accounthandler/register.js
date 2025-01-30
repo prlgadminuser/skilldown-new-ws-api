@@ -64,11 +64,9 @@ async function CreateAccount(username, password) {
 
                 return { token: token };
             } catch (error) {
-                console.log(error)
                 return { status: "Unexpected Error"};
             }
     } catch (error) {
-        console.log(error)
         return { status: "Unexpected Error"};
     }
 };

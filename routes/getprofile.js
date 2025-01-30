@@ -99,7 +99,6 @@ async function getUserProfile(usernamed) {
     ].join(":");
 
   } catch (error) {
-    console.log(error)
     throw new Error("An error occurred while fetching user profile");
   }
 }

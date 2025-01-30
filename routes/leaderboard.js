@@ -31,7 +31,7 @@ const updateHighscores = async () => {
 
     global.highscores = highscores
 
-    console.log("Highscores were successfully updated.");
+   // console.log("Highscores were successfully updated.");
   } catch (error) {
     console.error("Internal Server Error while updating highscores:", error);
   }

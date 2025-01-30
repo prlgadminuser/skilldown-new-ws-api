@@ -61,7 +61,6 @@ function calculateRarityPercentages() {
         previousThreshold = config.threshold;
     }
 
-   // console.log("Rarity Percentages:", rarityPercentages);
     return rarityPercentages;
 }
 
