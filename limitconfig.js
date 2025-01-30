@@ -18,7 +18,7 @@ function createRateLimiter() { // connected sending message rate limit
 }
 
 const getClientIp = (req) => {
-  const clientip = req.headers['true-client-ip']
+  const clientip = req.connection.remoteAddress
   //console.log(clientip
   return clientip
 };
