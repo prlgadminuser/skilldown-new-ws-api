@@ -18,8 +18,8 @@ function createRateLimiter() { // connected sending message rate limit
 }
 
 const getClientIp = (req) => {
-  const clientip = req.headers['x-forwarded-for']?.split(',')[0]
-  console.log(clientip)
+  const clientip = req.headers['true-client-ip']
+  //console.log(clientip
   return clientip
 };
 // back4app ip = req.headers['x-forwarded-for']?.split(',')[0]
@@ -50,7 +50,7 @@ const allowedOrigins = [
     "https://html-classic.itch.zone",
     "null",
     "https://turbowarp.org",
-    "https://liquemgames.itch.io/sd",
+    "https://liquemgames.itch.io/sr",
     "https://s-r.netlify.app",
     "https://uploads.ungrounded.net",
     "https://prod-dpgames.crazygames.com",

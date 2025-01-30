@@ -50,12 +50,11 @@ const server = http.createServer(async (req, res) => {
             return res.end("Too many requests. Try again later");
         }
 
-        const origin = req.headers.origin;
-        if (!allowedOrigins.includes(origin)) {
-                console.log("invalid origin", origin)
-            res.writeHead(429, { 'Content-Type': 'text/plain' });
-            return res.end("Unauthorized");
-        }
+       // const origin = req.headers.origin;
+       // if (!allowedOrigins.includes(origin)) {
+        //    res.writeHead(429, { 'Content-Type': 'text/plain' });
+         //   return res.end("Unauthorized");
+       // }
 
         // Security Headers
         res.setHeader("X-Frame-Options", "DENY");
@@ -78,7 +77,7 @@ const server = http.createServer(async (req, res) => {
                 return res.end("Unauthorized");
             }
             body += chunk.toString();
-         //   body = escapeInput(body.toString());
+            body = escapeInput(body.toString());
         });
 
         req.on('end', async () => {
