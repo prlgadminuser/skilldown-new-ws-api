@@ -61,7 +61,6 @@ const server = http.createServer(async (req, res) => {
         res.setHeader("X-Content-Type-Options", "nosniff");
         res.setHeader("Referrer-Policy", "no-referrer");
         res.setHeader("Permissions-Policy", "interest-cohort=()");
-        res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
@@ -78,6 +77,7 @@ const server = http.createServer(async (req, res) => {
                 return res.end("Unauthorized");
             }
             body += chunk.toString();
+            body = escapeInput(body.toString());
         });
 
         req.on('end', async () => {
@@ -264,7 +264,6 @@ wss.on("connection", (ws, req) => {
 
     const playerVerified = ws.playerVerified;
     playerVerified.lastPongTime = Date.now();
-    playerVerified.rateLimiter = createRateLimiter();
 
     //console.log(playerVerified.playerId, "connected");
 
@@ -325,11 +324,6 @@ server.on("upgrade", async (request, socket, head) => {
 
         await rateLimiterConnection.consume(ip);
 
-        if (chunk.length > api_message_size_limit) {
-            res.writeHead(429, { 'Content-Type': 'text/plain' });
-            return res.end("Unauthorized");
-        }
-
         const origin = request.headers.origin;
         if (!allowedOrigins.includes(origin)) {
             socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
@@ -343,6 +337,8 @@ server.on("upgrade", async (request, socket, head) => {
             return;
         }
 
+        
+
         const token = request.url.split('/')[1].replace(/\$/g, '');
 
         try {
@@ -355,6 +351,7 @@ server.on("upgrade", async (request, socket, head) => {
                 connectedPlayers.delete(playerVerified.playerId);
             }
 
+           playerVerified.rateLimiter = createRateLimiter();
             wss.handleUpgrade(request, socket, head, (ws) => {
                 ws.playerVerified = playerVerified;
                 connectedPlayers.set(playerVerified.playerId, ws);
