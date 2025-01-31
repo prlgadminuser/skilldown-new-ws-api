@@ -3,9 +3,9 @@ const { userCollection, badWords, usernameRegex, passwordRegex, tokenkey } = req
 const { jwt, bcrypt } = require('./..//index');
 const { webhook } = require('./..//discordwebhook');
 
-async function CreateAccount(username, password) {
+async function CreateAccount(username, password, user_country) {
     try {
-        let finalCountryCode = "Unknown"; 
+        const finalCountryCode = user_country
 
         if (!username || !password) {
             return { status: "Username and password are required" };
@@ -51,7 +51,7 @@ async function CreateAccount(username, password) {
                     password: hashedPassword,
                     coins: 0,
                     created_at: currentTimestamp,
-                    //country_code: finalCountryCode,
+                    country_code: finalCountryCode,
                     token,
                     last_collected: 0,
                     items: [],

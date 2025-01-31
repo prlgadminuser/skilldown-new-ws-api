@@ -17,9 +17,17 @@ function createRateLimiter() { // connected sending message rate limit
   });
 }
 
+const getClientCountry = (req) => {
+  const clientcountry = req.headers['cf-ipcountry'] || "Unknown"
+
+  return clientcountry
+};
+
 const getClientIp = (req) => {
-  const clientip = req.headers['true-client-ip']
-  //console.log(clientip
+  const clientip = req.headers['true-client-ip'] || req.connection.remoteAddress;
+
+  if (!clientip) throw new Error("error: ip not defined");
+
   return clientip
 };
 // back4app ip = req.headers['x-forwarded-for']?.split(',')[0]
@@ -68,6 +76,7 @@ module.exports = {
   apiRateLimiter,
   AccountRateLimiter,
   getClientIp,
+  getClientCountry,
   ws_message_size_limit,
   api_message_size_limit,
   maxClients,

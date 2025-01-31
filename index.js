@@ -23,7 +23,7 @@ const { buyRarityBox } = require('./routes/buyraritybox');
 const { getUserProfile } = require('./routes/getprofile');
 const { setupHighscores, gethighscores } = require('./routes/leaderboard');
 const { createRateLimiter, ConnectionOptionsRateLimit, apiRateLimiter, AccountRateLimiter, 
-        getClientIp, ws_message_size_limit, api_message_size_limit, maxClients, maintenanceMode, pingInterval, allowedOrigins } = require("./limitconfig");
+        getClientIp, getClientCountry, ws_message_size_limit, api_message_size_limit, maxClients, maintenanceMode, pingInterval, allowedOrigins } = require("./limitconfig");
 const { CreateAccount } = require('./accounthandler/register');
 const { Login } = require('./accounthandler/login');
 
@@ -104,6 +104,7 @@ const server = http.createServer(async (req, res) => {
 
 
                         const ip = getClientIp(req);
+                        const user_country = getClientCountry(req);
                         // Apply Rate Limiting Before Processing
                         const rateLimitData = await AccountRateLimiter.get(ip);
 
@@ -113,7 +114,7 @@ const server = http.createServer(async (req, res) => {
                         }
 
 
-                        const response = await CreateAccount(requestData.username, requestData.password);
+                        const response = await CreateAccount(requestData.username, requestData.password, user_country);
                         if (response?.token) {
                             AccountRateLimiter.consume(ip);
                             res.writeHead(201, { 'Content-Type': 'application/json' });
