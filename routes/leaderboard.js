@@ -50,7 +50,7 @@ async function setupHighscores() {
 
   updateHighscores();
 
-  setInterval(updateHighscores, 300000);
+  setInterval(updateHighscores, 3000000);
 }
 
 module.exports = {
