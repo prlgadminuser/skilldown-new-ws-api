@@ -123,7 +123,7 @@ const server = http.createServer(async (req, res) => {
                             res.writeHead(200, { 'Content-Type': 'application/json' });
                             return res.end(JSON.stringify({ data: response }));
                         } else {
-                            res.writeHead(400, { 'Content-Type': 'text/plain' });
+                            res.writeHead(400, { 'Content-Type': 'application/json' });
                             return res.end(JSON.stringify({ data: response }));
                         }
 
