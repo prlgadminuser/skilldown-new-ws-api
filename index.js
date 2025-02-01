@@ -118,15 +118,14 @@ const server = http.createServer(async (req, res) => {
 
 
                         const response = await CreateAccount(requestData.username, requestData.password, user_country);
-                        if (response.token) {
+                       if (response.token) {
                             AccountRateLimiter.consume(ip);
-                            res.writeHead(201, { 'Content-Type': 'application/json' });
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
                             return res.end(JSON.stringify({ data: response }));
                         } else {
                             res.writeHead(400, { 'Content-Type': 'text/plain' });
-                            return res.end("Error: Invalid account creation");
+                            return res.end(JSON.stringify({ data: response }));
                         }
-                        break;
 
                     case '/login':
                         if (req.method !== 'POST') break;
