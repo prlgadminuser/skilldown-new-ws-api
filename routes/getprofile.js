@@ -1,9 +1,10 @@
 
-const { userCollection } = require('./..//idbconfig');
+const { userCollection, profilesubcollection } = require('./..//idbconfig');
 
 const send_joined_date = false
+const count_profile_views = true
 
-async function getUserProfile(usernamed) {
+async function getUserProfile(usernamed, selfusername) {
   try {
     // Fetch user data from the database
     const userRow = await userCollection.findOne(
@@ -24,16 +25,31 @@ async function getUserProfile(usernamed) {
           kills: 1,
           damage: 1,
           wins: 1,
-          sp: 1
+          sp: 1,
+          p_views: 1,
           // country_code: 1, // Uncomment if country_code is needed
         },
       }
     );
 
-    // Handle case where the user is not found
     if (!userRow) {
       throw new Error("User not found");
     }
+
+
+    if (count_profile_views && selfusername !== usernamed) {
+
+      userCollection.updateOne(
+        { username: usernamed },                          // Find the user whose profile is being viewed
+        {
+          $inc: { p_views: 1 },                           // Increment the profile views count               // Add the viewer to the viewers set
+        },
+        {
+          upsert: true,                                   // Create a new document if not found                     // Ensure default values are set on insert (if needed)
+        }
+      );
+    }
+
 
     if (send_joined_date) {
 
@@ -95,6 +111,7 @@ async function getUserProfile(usernamed) {
       userRow.kills || 0,
       userRow.damage || 0,
       userRow.wins || 0,
+      userRow.p_views || 0,
       // country_code: userRow.country_code, // Uncomment if country_code is needed
     ].join(":");
 

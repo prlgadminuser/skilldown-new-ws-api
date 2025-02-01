@@ -52,5 +52,5 @@ module.exports = {
    usernameRegex,
    passwordRegex,
    badWords,
-   webhookURL
+   webhookURL,
 }

@@ -220,7 +220,7 @@ async function handleMessage(ws, message, playerVerified) {
                 break;
 
             case "profile":
-                response = await getUserProfile(data.pid);
+                response = await getUserProfile(data.pid, playerVerified.playerId);
                 ws.send(JSON.stringify({ type: "profile", data: response }));
                 break;
 
