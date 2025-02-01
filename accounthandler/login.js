@@ -2,12 +2,14 @@
 const { userCollection, tokenkey } = require('./..//idbconfig');
 const { jwt, bcrypt } = require('./..//index');
 
+const GenerateNewToken = false
+
 async function Login(username, password) {
   
     try {
       const user = await userCollection.findOne(
         { username },
-        { projection: { username: 1, password: 1 } },
+        { projection: { username: 1, password: 1, token: 1, } },
       );
   
       if (!user) {
@@ -20,10 +22,8 @@ async function Login(username, password) {
         return { status: "Invalid username or password" };
       }
   
-      // Generate a token
-      const token = jwt.sign({ username: user.username }, tokenkey);
-  
-      // Save the token to the user document
+      const token = GenerateNewToken ? jwt.sign({ username: user.username }, tokenkey) : user.token;
+
       await userCollection.updateOne({ username }, { $set: { token } });
   
       return { token: token };
