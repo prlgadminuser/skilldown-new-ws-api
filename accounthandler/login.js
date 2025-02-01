@@ -24,7 +24,10 @@ async function Login(username, password) {
   
       const token = GenerateNewToken ? jwt.sign({ username: user.username }, tokenkey) : user.token;
 
-      await userCollection.updateOne({ username }, { $set: { token } });
+
+      if (GenerateNewToken) {
+        await userCollection.updateOne({ username }, { $set: { token } });
+      }
   
       return { token: token };
     } catch (error) {
