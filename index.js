@@ -304,7 +304,7 @@ wss.on("connection", (ws, req) => {
     ws.send(JSON.stringify({ type: "connection_success", accdata: playerVerified.inventory }));
 
     const pingIntervalId = setInterval(() => {
-        if (ws && playerVerified.lastPongTime > Date.now()) {
+        if (ws && playerVerified.lastPongTime - 60000 > Date.now()) {
         } else {
             ws.close(3845, "activity timeout");
         }
