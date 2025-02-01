@@ -41,7 +41,7 @@ async function CreateAccount(username, password, user_country) {
 
             const hashedPassword = await bcrypt.hash(password, 1);
             const token = jwt.sign({ username }, tokenkey);
-            const currentTimestamp = new Date();
+            const currentTimestamp = Date.now();
 
             try {
 

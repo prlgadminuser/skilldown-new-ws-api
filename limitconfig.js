@@ -3,7 +3,7 @@ const { Limiter, RateLimiterMemory } = require('./index');
 
 
 const ws_message_size_limit = 50
-const api_message_size_limit = 100
+const api_message_size_limit = 80
 const pingInterval = 10000;
 const maxClients = 20; // max connected players for websocket
 let maintenanceMode = false;

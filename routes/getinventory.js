@@ -10,7 +10,7 @@ async function getUserInventory(username, loginrewardactive) {
             { username },
             {
                 $set: { last_login: //Date.now() 
-                    new Date() }
+                    Date.now() }
             }
         );
 

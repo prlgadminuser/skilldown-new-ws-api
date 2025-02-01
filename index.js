@@ -32,9 +32,11 @@ const playerQueue = new Map();
 
 let connectedClientsCount = 0;
 
+
 const server = http.createServer(async (req, res) => {
     try {
 
+       // if (req.headers.length)
         const ip = getClientIp(req);
 
         if (!ip) {
@@ -51,7 +53,8 @@ const server = http.createServer(async (req, res) => {
         }
 
         const origin = req.headers.origin;
-        if (!allowedOrigins.includes(origin)) {
+
+        if (!origin || origin.length > 50 || !allowedOrigins.includes(origin)) {
             res.writeHead(429, { 'Content-Type': 'text/plain' });
             return res.end("Unauthorized");
         }
@@ -73,7 +76,7 @@ const server = http.createServer(async (req, res) => {
 
         let body = '';
         req.on('data', (chunk) => {
-            if (chunk.length > api_message_size_limit) {
+            if (chunk.length && chunk.length > api_message_size_limit) {
                 res.writeHead(429, { 'Content-Type': 'text/plain' });
                 return res.end("Unauthorized");
             }
@@ -162,6 +165,8 @@ const server = http.createServer(async (req, res) => {
     }
 });
 
+// Loop through all headers and log their keys and value
+
 
 const wss = new WebSocket.Server({
     noServer: true,
@@ -176,10 +181,50 @@ function escapeStringForMongo(input) {
     return String(input).replace(/[§.]/g, '');
 }
 
+const deepSanitizeAndEscape = (value) => {
+    // If value is an array, recursively sanitize and escape each element
+    if (Array.isArray(value)) {
+        return value.map(elm => deepSanitizeAndEscape(elm));  // Return sanitized and escaped array
+    }
+
+    // If value is an object, recursively sanitize and escape each value in the object
+    if (typeof value === 'object' && value !== null) {
+        const sanitizedObj = {};
+        Object.keys(value).forEach(key => {
+            sanitizedObj[key] = deepSanitizeAndEscape(value[key]);  // Recursively sanitize and escape object values
+        });
+        return sanitizedObj;  // Return sanitized object
+    }
+
+    // Apply both sanitization and escaping
+    return escapeInput(sanitize(value));
+}
+
+function escapeInput(input, isJwt = false) {
+    if (input === null || input === undefined) return '';
+
+    if (isJwt && typeof input === 'string') {
+        return input.replace(/[$]/g, '');; // Return the JWT as is, no sanitization
+    }
+
+    if (typeof input === 'object') {
+        return JSON.stringify(input, (key, value) => {
+            if (typeof value === 'string') {
+                return value.replace(/[$.]/g, '');
+            }
+            return value;
+        });
+    }
+    return String(input).replace(/[$.]/g, '');
+}
+
+
 async function handleMessage(ws, message, playerVerified) {
 
     try {
-        const escapedMessage = escapeInput(message.toString());
+
+        const escapedMessage = escapeInput(message.toString())
+        //const escapedMessage = escapeInput(message.toString());
         const data = JSON.parse(escapedMessage);
 
         let response;
@@ -241,19 +286,6 @@ async function handleMessage(ws, message, playerVerified) {
     } catch (error) {
         ws.close(1007, "error");
     }
-}
-
-function escapeInput(input) {
-    if (input === null || input === undefined) return '';
-    if (typeof input === 'object') {
-        return JSON.stringify(input, (key, value) => {
-            if (typeof value === 'string') {
-                return value.replace(/[$.]/g, '');
-            }
-            return value;
-        });
-    }
-    return String(input).replace(/[$.]/g, '');
 }
 
 const rateLimiterConnection = new RateLimiterMemory(ConnectionOptionsRateLimit);
@@ -320,6 +352,8 @@ wss.on("connection", (ws, req) => {
 
 server.on("upgrade", async (request, socket, head) => {
     try {
+
+        
         const ip = getClientIp(request);
 
         if (!ip || request.url.length > 200) return;
@@ -327,7 +361,7 @@ server.on("upgrade", async (request, socket, head) => {
         await rateLimiterConnection.consume(ip);
 
         const origin = request.headers.origin;
-        if (!allowedOrigins.includes(origin)) {
+        if (!origin || origin.length > 50 || !allowedOrigins.includes(origin)) {
             socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
             socket.destroy();
             return;
@@ -339,12 +373,16 @@ server.on("upgrade", async (request, socket, head) => {
             return;
         }
 
-        
+        const token = request.url.split('/')[1];
 
-        const token = request.url.split('/')[1].replace(/\$/g, '');
+        if (!token || token.trim() === '') {
+        throw new Error('Invalid token');
+        }
+
+        const sanitizedToken = escapeInput(token, true); 
 
         try {
-            const playerVerified = await verifyPlayer(token);
+            const playerVerified = await verifyPlayer(sanitizedToken);
 
             const existingConnection = connectedPlayers.get(playerVerified.playerId);
             if (existingConnection) {
