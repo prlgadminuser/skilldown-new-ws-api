@@ -118,7 +118,7 @@ const server = http.createServer(async (req, res) => {
 
 
                         const response = await CreateAccount(requestData.username, requestData.password, user_country);
-                        if (response?.token) {
+                        if (response.token) {
                             AccountRateLimiter.consume(ip);
                             res.writeHead(201, { 'Content-Type': 'application/json' });
                             return res.end(JSON.stringify({ data: response }));
