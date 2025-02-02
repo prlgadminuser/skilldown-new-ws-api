@@ -59,7 +59,7 @@ const allowedOrigins = [
     "null",
     "https://turbowarp.org",
     "https://liquemgames.itch.io/sr",
-    "https://s-r.netlify.app",
+    "https://skilldown.netlify.app",
     "https://uploads.ungrounded.net",
     "https://prod-dpgames.crazygames.com",
     "https://crazygames.com",
