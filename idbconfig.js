@@ -8,9 +8,9 @@ const webhookURL = "https://discord.com/api/webhooks/1320922981161107528/KQ_m66i
 const lgconnecturi = `mongodb+srv://Liquem:${encodedPassword}@cluster0.ed4zami.mongodb.net/?retryWrites=true&w=majority`;
 
 
-const nicknameRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s|:|\$)).{4,16}$/u;
-const usernameRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s|:|\$)).{4,16}$/u;
-const passwordRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s|\$)).{4,20}$/u;
+const nicknameRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s|:|\$)).{4,16}$/;
+const usernameRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s|:|\$)).{4,16}$/;
+const passwordRegex = /^(?!.*(&[a-zA-Z0-9]+;|<|>|\/|\\|\s|\$)).{4,20}$/;
 const badWords = ["undefined", "null", "liquem", "nigga", "nigger", "niga", "fuck", "ass", "bitch", "hure", "schlampe", "hitler", "whore"]; 
 
 const uri = lgconnecturi
