@@ -313,20 +313,14 @@ wss.on("connection", (ws, req) => {
         }pingInterval
     }, pingInterval);
 
+/*
+   const FriendRealtimeDataInterval = setInterval(async () => {
 
-    const FriendRealtimeDataInterval = setInterval(async () => {
-
-        if (playerVerified.inventory.friends.length > 0) {
-
-
-            try {
-
-                const friendsdata = await GetFriendsDataLocal(playerVerified.playerId, playerVerified.inventory.friends);
-
-                if (playerVerified.inventory.friends.length > 0) {
-                ws.send(JSON.stringify({ type: "friendsup", data: friendsdata }));
-            }
-
+      if (playerVerified.inventory.friends.length > 0) {
+           try {
+             const friendsdata = await GetFriendsDataLocal(playerVerified.playerVerified);
+             ws.send(JSON.stringify({ type: "friendsup", data: friendsdata }));
+        
             } catch (error) {
 
                 clearInterval(FriendRealtimeDataInterval)
@@ -334,7 +328,7 @@ wss.on("connection", (ws, req) => {
             }
         }
     }, 10000);
-    
+    */
 
 
     ws.on("message", async (message) => {
