@@ -420,13 +420,13 @@ server.on("upgrade", async (request, socket, head) => {
                 existingConnection.close(1001, "Reassigned connection");
                 await new Promise(resolve => existingConnection.on('close', resolve));
 
-                connectedPlayers.delete(playerVerified.playerId, ws)
+                connectedPlayers.delete(playerVerified.playerId)
             }
 
            playerVerified.rateLimiter = createRateLimiter();
             wss.handleUpgrade(request, socket, head, (ws) => {
                 ws.playerVerified = playerVerified;
-                connectedPlayers.set(playerVerified.playerId); // ,ws is optional - removed to reduce ram size
+                connectedPlayers.set(playerVerified.playerId, ws); // ,ws is optional - removed to reduce ram size
                 connectedClientsCount++;
                 wss.emit("connection", ws, request);
             });
