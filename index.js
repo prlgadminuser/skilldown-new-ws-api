@@ -419,7 +419,8 @@ server.on("upgrade", async (request, socket, head) => {
             if (existingConnection) {
                 existingConnection.close(1001, "Reassigned connection");
                 await new Promise(resolve => existingConnection.on('close', resolve));
-                connectedPlayers.delete(playerVerified.playerId);
+
+                connectedPlayers.delete(playerVerified.playerId, ws)
             }
 
            playerVerified.rateLimiter = createRateLimiter();
