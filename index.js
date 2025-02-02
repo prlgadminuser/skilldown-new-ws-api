@@ -426,12 +426,7 @@ server.on("upgrade", async (request, socket, head) => {
            playerVerified.rateLimiter = createRateLimiter();
             wss.handleUpgrade(request, socket, head, (ws) => {
                 ws.playerVerified = playerVerified;
-               // connectedPlayers.set(playerVerified.playerId, playerVerified.inventory, ws); 
-
-               connectedPlayers.set(playerVerified.playerId, ws, {
-                inventory: playerVerified.inventory,   // Example: "online", "idle", "offline" // Last time they were online
-            });
-        
+                connectedPlayers.set(playerVerified.playerId, ws); 
 
                 connectedClientsCount++;
                 wss.emit("connection", ws, request);

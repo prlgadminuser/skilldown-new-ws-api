@@ -6,16 +6,7 @@ async function GetFriendsDataLocal(username, userfriends) {
     
     const onlineFriends = userfriends.filter(friend => connectedPlayers.has(friend));
 
-    const friendsData = onlineFriends.map(friend => {
-        const player = connectedPlayers.get(friend);  // Assuming connectedPlayers is a Map or similar
-
-        // Return detailed info for each friend (with additional fields like status, gameMode, etc.)
-        return {
-            name: player.inventory.nickname,
-        };
-    });
-
-    return friendsData;
+    return onlineFriends;
 }
 
 module.exports = {
