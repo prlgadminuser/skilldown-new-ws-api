@@ -36,7 +36,8 @@ async function getUserInventory(username, loginrewardactive) {
                         top_color: 1,
                         banner_color: 1,
                         gadget: 1,
-                        lastnameupdate: 1,
+                        nameupdate: 1,
+                        friends: 1,
                     }
                 }
             ),
@@ -119,7 +120,9 @@ async function getUserInventory(username, loginrewardactive) {
             season_end: configrow ? configrow.season_end : null,
             onetimereward,
             boxrarities: rarityPercentages,
-            lastnameupdate: userRow.lastnameupdate || 0,
+            lastnameupdate: userRow.nameupdate || 0,
+            friends: userRow.friends || [],
+            requests: userRow.requests || [],
         }
 
         // Return the constructed object

@@ -1,11 +1,16 @@
 "use strict";
 
+const connectedPlayers = new Map();
+//const playerQueue = new Map();
+
+let connectedClientsCount = 0;
+
 const jwt = require("jsonwebtoken");
 const Limiter = require("limiter").RateLimiter;
 const bcrypt = require("bcrypt");
 const Discord = require("discord.js");
 const { RateLimiterMemory } = require('rate-limiter-flexible');
-module.exports = { jwt, Limiter, bcrypt, Discord, RateLimiterMemory };
+module.exports = { jwt, Limiter, bcrypt, Discord, RateLimiterMemory, connectedPlayers };
 const { startMongoDB, shopcollection } = require("./idbconfig");
 var sanitize = require('mongo-sanitize');
 const WebSocket = require("ws");
@@ -21,16 +26,14 @@ const { getdailyreward } = require('./routes/dailyreward');
 const { buyItem } = require('./routes/buyitem');
 const { buyRarityBox } = require('./routes/buyraritybox');
 const { getUserProfile } = require('./routes/getprofile');
+const { GetFriendsDataLocal } = require('./routes/getfriendactivity');
 const { setupHighscores, gethighscores } = require('./routes/leaderboard');
 const { createRateLimiter, ConnectionOptionsRateLimit, apiRateLimiter, AccountRateLimiter, 
         getClientIp, getClientCountry, ws_message_size_limit, api_message_size_limit, maxClients, maintenanceMode, pingInterval, allowedOrigins } = require("./limitconfig");
 const { CreateAccount } = require('./accounthandler/register');
 const { Login } = require('./accounthandler/login');
 
-const connectedPlayers = new Map();
-const playerQueue = new Map();
 
-let connectedClientsCount = 0;
 
 
 const server = http.createServer(async (req, res) => {
@@ -60,13 +63,14 @@ const server = http.createServer(async (req, res) => {
         }
 
         // Security Headers
-        res.setHeader("X-Frame-Options", "DENY");
-        res.setHeader("X-Content-Type-Options", "nosniff");
-        res.setHeader("Referrer-Policy", "no-referrer");
-        res.setHeader("Permissions-Policy", "interest-cohort=()");
+        //res.setHeader("X-Frame-Options", "DENY");
+       // res.setHeader("X-Content-Type-Options", "nosniff");
+      //  res.setHeader("Referrer-Policy", "no-referrer");
+       // res.setHeader("Permissions-Policy", "interest-cohort=()");
         res.setHeader("Access-Control-Allow-Origin", origin);
         res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
 
         // Handle preflight OPTIONS requests
         if (req.method === 'OPTIONS') {
@@ -118,7 +122,7 @@ const server = http.createServer(async (req, res) => {
 
 
                         const response = await CreateAccount(requestData.username, requestData.password, user_country);
-                       if (response.token) {
+                        if (response.token) {
                             AccountRateLimiter.consume(ip);
                             res.writeHead(200, { 'Content-Type': 'application/json' });
                             return res.end(JSON.stringify({ data: response }));
@@ -126,6 +130,7 @@ const server = http.createServer(async (req, res) => {
                             res.writeHead(400, { 'Content-Type': 'application/json' });
                             return res.end(JSON.stringify({ data: response }));
                         }
+
 
                     case '/login':
                         if (req.method !== 'POST') break;
@@ -305,8 +310,31 @@ wss.on("connection", (ws, req) => {
     const pingIntervalId = setInterval(() => {
         if (!ws || playerVerified.lastPongTime <= Date.now() - 50000) {
             ws.close(3845, "activity timeout");
-        }
+        }pingInterval
     }, pingInterval);
+
+
+    const FriendRealtimeDataInterval = setInterval(async () => {
+
+        if (playerVerified.inventory.friends.length > 0) {
+
+            try {
+
+                const friendsdata = await GetFriendsDataLocal(playerVerified.playerId, playerVerified.inventory.friends);
+
+                if (friendsdata.length > 0) {
+                ws.send(JSON.stringify({ type: "onlinefriends", data: friendsdata }));
+            }
+
+            } catch (error) {
+
+                clearInterval(FriendRealtimeDataInterval)
+                console.error("Error fetching friends' data:", error);
+            }
+        }
+    }, 10000);
+    
+
 
     ws.on("message", async (message) => {
         try {
@@ -332,6 +360,7 @@ wss.on("connection", (ws, req) => {
 
     ws.on("close", () => {
         clearInterval(pingIntervalId);
+        clearInterval(FriendRealtimeDataInterval);
 
         const playerId = ws.playerVerified?.playerId;
 
@@ -339,10 +368,10 @@ wss.on("connection", (ws, req) => {
             connectedPlayers.delete(playerId);
             connectedClientsCount--;
 
-            if (playerQueue.has(playerId)) {
-                playerQueue.delete(playerId);
+           // if (playerQueue.has(playerId)) {
+             //   playerQueue.delete(playerId);
                // console.log(`Player ${playerId} removed from queue due to disconnection.`);
-            }
+          //  }
         }
     });
 });
@@ -392,7 +421,7 @@ server.on("upgrade", async (request, socket, head) => {
            playerVerified.rateLimiter = createRateLimiter();
             wss.handleUpgrade(request, socket, head, (ws) => {
                 ws.playerVerified = playerVerified;
-                connectedPlayers.set(playerVerified.playerId, ws);
+                connectedPlayers.set(playerVerified.playerId); // ,ws is optional - removed to reduce ram size
                 connectedClientsCount++;
                 wss.emit("connection", ws, request);
             });

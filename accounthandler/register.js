@@ -39,7 +39,7 @@ async function CreateAccount(username, password, user_country) {
             return { status: "Name already taken. Choose another one." };
         }
 
-            const hashedPassword = await bcrypt.hash(password, 1);
+            const hashedPassword = await bcrypt.hash(password, 2);
             const token = jwt.sign({ username }, tokenkey);
             const currentTimestamp = Date.now();
 

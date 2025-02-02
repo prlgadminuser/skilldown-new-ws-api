@@ -35,12 +35,12 @@ async function updateNickname(username, newName) {
         // Fetch the user's current nicknameUpdatedAt timestamp
         const user = await userCollection.findOne(
             { username },
-            { projection: { lastnameupdate: 1 } } // Only return the nicknameUpdatedAt field
+            { projection: { nameupdate: 1 } } // Only return the nicknameUpdatedAt field
         );
 
         // Check if the nickname can be updated based on the cooldown
         const now = Date.now();
-        const lastUpdated = user?.lastnameupdate || 0; // Default to epoch if no timestamp exists
+        const lastUpdated = user?.nameupdate || 0; // Default to epoch if no timestamp exists
         const timeDiff = now - lastUpdated; // Difference in milliseconds
 
         const cooldownPeriod = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -58,7 +58,7 @@ async function updateNickname(username, newName) {
             { 
                 $set: { 
                     nickname: newNickname, 
-                    lastnameupdate: Date.now() // Set current timestamp as nicknameUpdatedAt 
+                    nameupdate: Date.now() // Set current timestamp as nicknameUpdatedAt 
                 } 
             }
         );
