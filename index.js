@@ -326,7 +326,7 @@ wss.on("connection", (ws, req) => {
                 const friendsdata = await GetFriendsDataLocal(playerVerified.playerId, playerVerified.inventory.friends);
 
                 if (lastmsg.length > 0) {
-                ws.send(JSON.stringify({ frup: friendsdata }));
+                ws.send(JSON.stringify({ type: "friendsup", data: friendsdata }));
                 lastmsg = friendsdata
             }
 
@@ -426,7 +426,13 @@ server.on("upgrade", async (request, socket, head) => {
            playerVerified.rateLimiter = createRateLimiter();
             wss.handleUpgrade(request, socket, head, (ws) => {
                 ws.playerVerified = playerVerified;
-                connectedPlayers.set(playerVerified.playerId, ws); // ,ws is optional - removed to reduce ram size
+               // connectedPlayers.set(playerVerified.playerId, playerVerified.inventory, ws); 
+
+               connectedPlayers.set(playerVerified.playerId, ws, {
+                inventory: playerVerified.inventory,   // Example: "online", "idle", "offline" // Last time they were online
+            });
+        
+
                 connectedClientsCount++;
                 wss.emit("connection", ws, request);
             });
