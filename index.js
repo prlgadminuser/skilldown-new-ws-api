@@ -316,8 +316,6 @@ wss.on("connection", (ws, req) => {
 
     const FriendRealtimeDataInterval = setInterval(async () => {
 
-        let lastmsg = ["1"]
-
         if (playerVerified.inventory.friends.length > 0) {
 
 
@@ -325,9 +323,8 @@ wss.on("connection", (ws, req) => {
 
                 const friendsdata = await GetFriendsDataLocal(playerVerified.playerId, playerVerified.inventory.friends);
 
-                if (lastmsg.length > 0) {
+                if (playerVerified.inventory.friends.length > 0) {
                 ws.send(JSON.stringify({ type: "friendsup", data: friendsdata }));
-                lastmsg = friendsdata
             }
 
             } catch (error) {
