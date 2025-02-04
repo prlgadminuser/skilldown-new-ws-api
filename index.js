@@ -355,7 +355,7 @@ wss.on("connection", (ws, req) => {
 
     ws.on("close", () => {
         clearInterval(pingIntervalId);
-        clearInterval(FriendRealtimeDataInterval);
+       // clearInterval(FriendRealtimeDataInterval);
 
         const playerId = ws.playerVerified?.playerId;
 
@@ -472,10 +472,6 @@ watchItemShop();
 
 setupHighscores();
 
-process.on("SIGINT", () => {
-    changeStream.close();
-    process.exit();
-});
 
 function broadcast(message) {
     const msg = JSON.stringify({ update: message });
@@ -489,3 +485,16 @@ function closeAllClients(code, reason) {
         }
     });
 }
+
+process.on("SIGINT", () => {
+    changeStream.close();
+    process.exit();
+});
+
+process.on("uncaughtException", (error) => {
+    //console.error("Uncaught Exception:", error);
+  });
+  
+  process.on("unhandledRejection", (reason, promise) => {
+    //console.error("Unhandled Rejection:", reason, promise);
+  });
