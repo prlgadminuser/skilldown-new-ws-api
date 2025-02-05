@@ -2,7 +2,7 @@
 const { userCollection } = require('./..//idbconfig');
 
 const send_joined_date = false
-const count_profile_views = false
+const count_profile_views = true
 
 async function getUserProfile(usernamed, selfusername) {
   try {
