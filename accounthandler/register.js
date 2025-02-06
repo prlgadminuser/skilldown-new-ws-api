@@ -53,8 +53,10 @@ async function CreateAccount(username, password, user_country) {
                     created_at: currentTimestamp,
                     country_code: finalCountryCode,
                     token,
+                    lastping: currentTimestamp,
                     last_collected: 0,
                     items: [],
+                    friends: [],
 
                 });
 

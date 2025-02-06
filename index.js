@@ -26,7 +26,7 @@ const { getdailyreward } = require('./routes/dailyreward');
 const { buyItem } = require('./routes/buyitem');
 const { buyRarityBox } = require('./routes/buyraritybox');
 const { getUserProfile } = require('./routes/getprofile');
-const { GetFriendsDataLocal } = require('./routes/getfriendactivity');
+const { GetFriendsDataLocal, UpdateSelfPingTime } = require('./routes/FriendsOnlineSystem');
 const { setupHighscores, gethighscores } = require('./routes/leaderboard');
 const { createRateLimiter, ConnectionOptionsRateLimit, apiRateLimiter, AccountRateLimiter, 
         getClientIp, getClientCountry, ws_message_size_limit, api_message_size_limit, maxClients, maintenanceMode, pingInterval, allowedOrigins } = require("./limitconfig");
@@ -313,12 +313,13 @@ wss.on("connection", (ws, req) => {
         }pingInterval
     }, pingInterval);
 
-/*
-   const FriendRealtimeDataInterval = setInterval(async () => {
 
-      if (playerVerified.inventory.friends.length > 0) {
+    const FriendOnlineInterval = setInterval(async () => {
+
+      if (playerVerified.inventory.friends.length > -1) {
            try {
-             const friendsdata = await GetFriendsDataLocal(playerVerified.playerVerified);
+             const friendsdata = await GetFriendsDataLocal(playerVerified.playerId);
+             UpdateSelfPingTime(playerVerified.playerId)
              ws.send(JSON.stringify({ type: "friendsup", data: friendsdata }));
         
             } catch (error) {
@@ -328,7 +329,6 @@ wss.on("connection", (ws, req) => {
             }
         }
     }, 10000);
-    */
 
 
     ws.on("message", async (message) => {
@@ -354,8 +354,8 @@ wss.on("connection", (ws, req) => {
     });
 
     ws.on("close", () => {
-        clearInterval(pingIntervalId);
-       // clearInterval(FriendRealtimeDataInterval);
+         if (pingInterval) clearInterval(pingIntervalId);
+         if (FriendOnlineInterval) clearInterval(FriendOnlineInterval);
 
         const playerId = ws.playerVerified?.playerId;
 
