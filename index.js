@@ -29,12 +29,12 @@ const { getUserProfile } = require('./routes/getprofile');
 const { GetFriendsDataLocal, UpdateSelfPingTime } = require('./routes/FriendsOnlineSystem');
 const { setupHighscores, gethighscores } = require('./routes/leaderboard');
 const { createRateLimiter, ConnectionOptionsRateLimit, apiRateLimiter, AccountRateLimiter, 
-        getClientIp, getClientCountry, ws_message_size_limit, api_message_size_limit, maxClients, maintenanceMode, pingInterval, allowedOrigins } = require("./limitconfig");
+        getClientIp, getClientCountry, ws_message_size_limit, api_message_size_limit, maxClients, maintenanceMode, pingInterval, allowedOrigins, friendUpdatesTime } = require("./limitconfig");
 const { CreateAccount } = require('./accounthandler/register');
 const { Login } = require('./accounthandler/login');
+const { setUserOnlineStatus } = require('./routes/redisHandler')
 
-
-
+//setUserOnlineStatus("agag", "agg")
 
 const server = http.createServer(async (req, res) => {
     try {
@@ -314,21 +314,35 @@ wss.on("connection", (ws, req) => {
     }, pingInterval);
 
 
+    getfrienddata(playerVerified.playerId, ws)
+
+    
+    async function getfrienddata(username, ws) {
+
+    try {
+        const friendsdata = await GetFriendsDataLocal(username);
+        UpdateSelfPingTime(username)
+        ws.send(JSON.stringify({ type: "friendsup", data: friendsdata }));
+   
+       } catch (error) {
+
+       }
+    }
+
     const FriendOnlineInterval = setInterval(async () => {
 
-      if (playerVerified.inventory.friends.length > -1) {
-           try {
-             const friendsdata = await GetFriendsDataLocal(playerVerified.playerId);
-             UpdateSelfPingTime(playerVerified.playerId)
-             ws.send(JSON.stringify({ type: "friendsup", data: friendsdata }));
-        
-            } catch (error) {
-
-                clearInterval(FriendRealtimeDataInterval)
-                console.error("Error fetching friends' data:", error);
-            }
-        }
-    }, 10000);
+        if (playerVerified.inventory.friends.length > -1) {
+             try {
+               await getfrienddata(playerVerified.playerId, ws)
+          
+              } catch (error) {
+  
+                  clearInterval(FriendRealtimeDataInterval)
+                  console.error("Error fetching friends' data:", error);
+              }
+          }
+      }, friendUpdatesTime);
+    
 
 
     ws.on("message", async (message) => {

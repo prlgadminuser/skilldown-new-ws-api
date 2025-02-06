@@ -1,11 +1,12 @@
 
 const { userCollection } = require("../idbconfig");
 const { connectedPlayers } = require('./..//index');
+const { friendUpdatesTime } = require("../limitconfig");
 
 
 async function GetFriendsDataLocal(username) {
   try {
-    const maxAgeOfPing = 20000; // 20 seconds in milliseconds
+    const maxAgeOfPing = friendUpdatesTime + 5000; // 20 seconds in milliseconds
     const recentPingThreshold = Date.now() - maxAgeOfPing;
 
     const result = await userCollection.aggregate([
@@ -43,7 +44,7 @@ async function GetFriendsDataLocal(username) {
           friendsOnline: onlineFriends.map(friend => ({
           id: friend.username,
           nick: friend.nickname,
-          sp: friend.sp
+          sp: friend.sp || 0,
         }))
       
     };

@@ -2,6 +2,7 @@
 const { Limiter, RateLimiterMemory } = require('./index');
 
 
+const friendUpdatesTime = 20000
 const ws_message_size_limit = 50
 const api_message_size_limit = 120
 const pingInterval = 60000;
@@ -83,4 +84,5 @@ module.exports = {
   maintenanceMode,
   pingInterval,
   allowedOrigins,
+  friendUpdatesTime,
 }
