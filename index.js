@@ -314,6 +314,7 @@ wss.on("connection", (ws, req) => {
     }, pingInterval);
 
 
+    /*
     getfrienddata(playerVerified.playerId, ws)
 
     
@@ -329,7 +330,7 @@ wss.on("connection", (ws, req) => {
        }
     }
 
-    const FriendOnlineInterval = setInterval(async () => {
+ const FriendOnlineInterval = setInterval(async () => {
 
         if (playerVerified.inventory.friends.length > -1) {
              try {
@@ -342,6 +343,8 @@ wss.on("connection", (ws, req) => {
               }
           }
       }, friendUpdatesTime);
+
+      */
     
 
 
