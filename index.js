@@ -371,8 +371,14 @@ wss.on("connection", (ws, req) => {
     });
 
     ws.on("close", () => {
-         if (pingInterval) clearInterval(pingIntervalId);
-         if (FriendOnlineInterval) clearInterval(FriendOnlineInterval);
+        if (typeof pingIntervalId !== "undefined" && pingIntervalId) {
+            clearInterval(pingIntervalId);
+        }
+        
+        if (typeof FriendOnlineInterval !== "undefined" && FriendOnlineInterval) {
+            clearInterval(FriendOnlineInterval);
+        }
+        
 
         const playerId = ws.playerVerified?.playerId;
 
@@ -509,9 +515,9 @@ process.on("SIGINT", () => {
 });
 
 process.on("uncaughtException", (error) => {
-    //console.error("Uncaught Exception:", error);
+    console.error("Uncaught Exception:", error);
   });
   
   process.on("unhandledRejection", (reason, promise) => {
-    //console.error("Unhandled Rejection:", reason, promise);
+    console.error("Unhandled Rejection:", reason, promise);
   });
