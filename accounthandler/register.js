@@ -52,12 +52,9 @@ async function CreateAccount(username, password, user_country) {
                     coins: 100,
                     created_at: currentTimestamp,
                     country_code: finalCountryCode,
-                    token,
+                    token: token,
                     lastping: currentTimestamp,
                     last_collected: 0,
-                    items: [],
-                    friends: [],
-
                 });
 
 
