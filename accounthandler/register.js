@@ -49,12 +49,15 @@ async function CreateAccount(username, password, user_country) {
                     username,
                     nickname: username,
                     password: hashedPassword,
-                    coins: 100,
+                    coins: 0,
                     created_at: currentTimestamp,
                     country_code: finalCountryCode,
-                    token: token,
+                    token,
                     lastping: currentTimestamp,
                     last_collected: 0,
+                    items: [],
+                    friends: [],
+
                 });
 
 

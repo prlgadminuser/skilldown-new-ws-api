@@ -67,9 +67,15 @@ const server = http.createServer(async (req, res) => {
        // res.setHeader("X-Content-Type-Options", "nosniff");
       //  res.setHeader("Referrer-Policy", "no-referrer");
        // res.setHeader("Permissions-Policy", "interest-cohort=()");
-        res.setHeader("Access-Control-Allow-Origin", origin);
-        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+       res.setHeader("X-Frame-Options", "DENY");
+       res.setHeader("X-Content-Type-Options", "nosniff");
+       res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+       res.setHeader("Content-Security-Policy", "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'");
+       res.setHeader("Referrer-Policy", "no-referrer");
+       res.setHeader("Permissions-Policy", "geolocation=(), microphone=()");
+       res.setHeader("Access-Control-Allow-Origin", origin);
+       res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+       res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
 
         // Handle preflight OPTIONS requests
